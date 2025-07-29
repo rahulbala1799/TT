@@ -132,6 +132,130 @@ export default function Home() {
     return colors[priority as keyof typeof colors] || 'text-gray-600 bg-gray-50 border-gray-200'
   }
 
+  // Enhanced Analytics Functions
+  const getTimeBasedStats = () => {
+    const now = new Date()
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay())
+    startOfWeek.setHours(0, 0, 0, 0)
+    
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    
+    const thisWeek = orders.filter(order => {
+      if (!order.dueDate) return false
+      const dueDate = new Date(order.dueDate)
+      return dueDate >= startOfWeek && dueDate <= now
+    })
+    
+    const thisMonth = orders.filter(order => {
+      if (!order.dueDate) return false
+      const dueDate = new Date(order.dueDate)
+      return dueDate >= startOfMonth && dueDate <= endOfMonth
+    })
+    
+    const overdue = orders.filter(order => {
+      if (!order.dueDate) return false
+      const dueDate = new Date(order.dueDate)
+      return dueDate < now && getMainStatus(order.statuses) !== 'DELIVERED' && getMainStatus(order.statuses) !== 'CANCELLED'
+    })
+    
+    const upcoming = orders.filter(order => {
+      if (!order.dueDate) return false
+      const dueDate = new Date(order.dueDate)
+      const nextWeek = new Date(now)
+      nextWeek.setDate(now.getDate() + 7)
+      return dueDate > now && dueDate <= nextWeek
+    })
+    
+    return { thisWeek, thisMonth, overdue, upcoming }
+  }
+
+  const getFinancialStats = () => {
+    const totalValue = orders.reduce((sum, order) => sum + Number(order.totalPrice), 0)
+    const completedOrders = orders.filter(order => getMainStatus(order.statuses) === 'DELIVERED')
+    const completedValue = completedOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0)
+    const pendingValue = totalValue - completedValue
+    const averageOrderValue = orders.length > 0 ? totalValue / orders.length : 0
+    
+    // Monthly revenue (last 6 months)
+    const monthlyRevenue = []
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = new Date()
+      monthStart.setMonth(monthStart.getMonth() - i)
+      monthStart.setDate(1)
+      monthStart.setHours(0, 0, 0, 0)
+      
+      const monthEnd = new Date(monthStart)
+      monthEnd.setMonth(monthEnd.getMonth() + 1)
+      monthEnd.setDate(0)
+      monthEnd.setHours(23, 59, 59, 999)
+      
+      const monthOrders = completedOrders.filter(order => {
+        const completedAt = new Date(order.createdAt) // Using createdAt as proxy for completion
+        return completedAt >= monthStart && completedAt <= monthEnd
+      })
+      
+      const monthValue = monthOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0)
+      monthlyRevenue.push({
+        month: monthStart.toLocaleDateString('en-US', { month: 'short' }),
+        value: monthValue
+      })
+    }
+    
+    return { totalValue, completedValue, pendingValue, averageOrderValue, monthlyRevenue }
+  }
+
+  const getStatusDistribution = () => {
+    const distribution: { [key: string]: number } = {}
+    
+    orders.forEach(order => {
+      const mainStatus = getMainStatus(order.statuses)
+      distribution[mainStatus] = (distribution[mainStatus] || 0) + 1
+    })
+    
+    return distribution
+  }
+
+  const getCustomerStats = () => {
+    const customerOrders: { [key: string]: { count: number, value: number, orders: Order[] } } = {}
+    
+    orders.forEach(order => {
+      const customerKey = order.customer.company || order.customer.name
+      if (!customerOrders[customerKey]) {
+        customerOrders[customerKey] = { count: 0, value: 0, orders: [] }
+      }
+      customerOrders[customerKey].count++
+      customerOrders[customerKey].value += Number(order.totalPrice)
+      customerOrders[customerKey].orders.push(order)
+    })
+    
+    const topCustomers = Object.entries(customerOrders)
+      .sort(([, a], [, b]) => b.value - a.value)
+      .slice(0, 5)
+      .map(([name, data]) => ({ name, ...data }))
+    
+    return { topCustomers, totalCustomers: Object.keys(customerOrders).length }
+  }
+
+  const getPerformanceMetrics = () => {
+    const completedOrders = orders.filter(order => getMainStatus(order.statuses) === 'DELIVERED')
+    const completionRate = orders.length > 0 ? (completedOrders.length / orders.length) * 100 : 0
+    
+    // Calculate average processing time (simplified - using creation to current date)
+    const processingTimes = completedOrders.map(order => {
+      const created = new Date(order.createdAt)
+      const now = new Date()
+      return Math.ceil((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)) // days
+    })
+    
+    const averageProcessingTime = processingTimes.length > 0 
+      ? processingTimes.reduce((sum, time) => sum + time, 0) / processingTimes.length 
+      : 0
+    
+    return { completionRate, averageProcessingTime }
+  }
+
   // Group orders by date
   const groupOrdersByDate = () => {
     const grouped: { [key: string]: Order[] } = {}
@@ -226,24 +350,15 @@ export default function Home() {
     }
   }
 
-  // Calculate stats based on main status
-  const getOrderStats = () => {
-    const completed = orders.filter(o => {
-      const mainStatus = getMainStatus(o.statuses)
-      return mainStatus === 'DELIVERED'
-    }).length
-
-    const inProgress = orders.filter(o => {
-      const mainStatus = getMainStatus(o.statuses)
-      return ['IN_DESIGN', 'DESIGN_PROOFING', 'IN_PRODUCTION', 'QUALITY_CHECK'].includes(mainStatus)
-    }).length
-
-    return { completed, inProgress }
-  }
+  // Calculate enhanced stats
+  const { thisWeek, thisMonth, overdue, upcoming } = getTimeBasedStats()
+  const { totalValue, completedValue, pendingValue, averageOrderValue, monthlyRevenue } = getFinancialStats()
+  const statusDistribution = getStatusDistribution()
+  const { topCustomers, totalCustomers } = getCustomerStats()
+  const { completionRate, averageProcessingTime } = getPerformanceMetrics()
 
   const { days } = getCalendarData()
   const groupedOrders = groupOrdersByDate()
-  const { completed, inProgress } = getOrderStats()
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -298,23 +413,23 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Quick Stats */}
+        {/* Enhanced Quick Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="card p-4 text-center">
             <div className="text-2xl font-bold text-blue-600">{orders.length}</div>
             <div className="text-sm text-muted">Total Orders</div>
           </div>
           <div className="card p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">{completed}</div>
-            <div className="text-sm text-muted">Completed</div>
+            <div className="text-2xl font-bold text-green-600">{thisWeek.length}</div>
+            <div className="text-sm text-muted">This Week</div>
           </div>
           <div className="card p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">{inProgress}</div>
-            <div className="text-sm text-muted">In Progress</div>
+            <div className="text-2xl font-bold text-orange-600">{overdue.length}</div>
+            <div className="text-sm text-muted">Overdue</div>
           </div>
           <div className="card p-4 text-center">
             <div className="text-2xl font-bold text-gray-900">
-              {formatEuro(orders.reduce((sum, order) => sum + Number(order.totalPrice), 0))}
+              {formatEuro(totalValue)}
             </div>
             <div className="text-sm text-muted">Total Value</div>
           </div>
@@ -335,6 +450,191 @@ export default function Home() {
             View All Orders
           </Link>
         </div>
+
+        {/* Enhanced Analytics Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Financial Overview */}
+          <div className="card p-6">
+            <h3 className="heading-sm mb-4 flex items-center">
+              <span className="text-2xl mr-2">💰</span>
+              Financial Overview
+            </h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <div className="text-lg font-bold text-green-600">{formatEuro(completedValue)}</div>
+                  <div className="text-xs text-muted">Completed</div>
+                </div>
+                <div className="text-center p-3 bg-orange-50 rounded-lg">
+                  <div className="text-lg font-bold text-orange-600">{formatEuro(pendingValue)}</div>
+                  <div className="text-xs text-muted">Pending</div>
+                </div>
+              </div>
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <div className="text-lg font-bold text-blue-600">{formatEuro(averageOrderValue)}</div>
+                <div className="text-xs text-muted">Average Order Value</div>
+              </div>
+              
+              {/* Monthly Revenue Chart */}
+              <div className="mt-4">
+                <h4 className="text-sm font-semibold mb-2">Monthly Revenue (Last 6 Months)</h4>
+                <div className="flex items-end justify-between h-20 space-x-1">
+                  {monthlyRevenue.map((month, index) => {
+                    const maxValue = Math.max(...monthlyRevenue.map(m => m.value))
+                    const height = maxValue > 0 ? (month.value / maxValue) * 100 : 0
+                    return (
+                      <div key={index} className="flex flex-col items-center flex-1">
+                        <div 
+                          className="w-full bg-blue-200 rounded-t"
+                          style={{ height: `${height}%` }}
+                        ></div>
+                        <div className="text-xs text-muted mt-1">{month.month}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Performance Metrics */}
+          <div className="card p-6">
+            <h3 className="heading-sm mb-4 flex items-center">
+              <span className="text-2xl mr-2">📊</span>
+              Performance Metrics
+            </h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <div className="text-lg font-bold text-green-600">{completionRate.toFixed(1)}%</div>
+                  <div className="text-xs text-muted">Completion Rate</div>
+                </div>
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <div className="text-lg font-bold text-blue-600">{averageProcessingTime.toFixed(1)}</div>
+                  <div className="text-xs text-muted">Avg Days</div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-purple-50 rounded-lg">
+                  <div className="text-lg font-bold text-purple-600">{thisMonth.length}</div>
+                  <div className="text-xs text-muted">This Month</div>
+                </div>
+                <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                  <div className="text-lg font-bold text-yellow-600">{upcoming.length}</div>
+                  <div className="text-xs text-muted">Upcoming</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Distribution & Top Customers */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Status Distribution */}
+          <div className="card p-6">
+            <h3 className="heading-sm mb-4 flex items-center">
+              <span className="text-2xl mr-2">📋</span>
+              Status Distribution
+            </h3>
+            <div className="space-y-3">
+              {Object.entries(statusDistribution)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 6)
+                .map(([status, count]) => {
+                  const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
+                  const percentage = orders.length > 0 ? (count / orders.length) * 100 : 0
+                  return (
+                    <div key={status} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg">{config?.icon || '📋'}</span>
+                        <span className="text-sm font-medium">{config?.label || status}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium w-8 text-right">{count}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+
+          {/* Top Customers */}
+          <div className="card p-6">
+            <h3 className="heading-sm mb-4 flex items-center">
+              <span className="text-2xl mr-2">👥</span>
+              Top Customers
+            </h3>
+            <div className="space-y-3">
+              {topCustomers.map((customer, index) => (
+                <div key={customer.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm">{customer.name}</div>
+                      <div className="text-xs text-muted">{customer.count} orders</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-sm">{formatEuro(customer.value)}</div>
+                    <div className="text-xs text-muted">
+                      {orders.length > 0 ? ((customer.count / orders.length) * 100).toFixed(1) : 0}%
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="text-center pt-2">
+                <span className="text-sm text-muted">Total Customers: {totalCustomers}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Urgent Orders */}
+        {overdue.length > 0 && (
+          <div className="card p-6 mb-8">
+            <h3 className="heading-sm mb-4 flex items-center text-red-600">
+              <span className="text-2xl mr-2">⚠️</span>
+              Overdue Orders ({overdue.length})
+            </h3>
+            <div className="space-y-3">
+              {overdue.slice(0, 5).map(order => {
+                const mainStatus = getMainStatus(order.statuses)
+                const statusConfig = STATUS_CONFIG[mainStatus as keyof typeof STATUS_CONFIG]
+                const daysOverdue = Math.ceil((new Date().getTime() - new Date(order.dueDate!).getTime()) / (1000 * 60 * 60 * 24))
+                
+                return (
+                  <div key={order.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="text-xl">{statusConfig?.icon || '📋'}</div>
+                      <div>
+                        <div className="font-medium">{order.title}</div>
+                        <div className="text-sm text-muted">#{order.orderNumber} • {order.customer.name}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-red-600">{formatEuro(Number(order.totalPrice))}</div>
+                      <div className="text-sm text-red-600">{daysOverdue} days overdue</div>
+                    </div>
+                  </div>
+                )
+              })}
+              {overdue.length > 5 && (
+                <div className="text-center pt-2">
+                  <span className="text-sm text-muted">+{overdue.length - 5} more overdue orders</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Calendar */}
         <div className="card p-6 mb-8">
