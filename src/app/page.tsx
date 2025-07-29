@@ -144,25 +144,29 @@ export default function Home() {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
     
     const thisWeek = orders.filter(order => {
-      if (!order.dueDate) return false
+      const mainStatus = getMainStatus(order.statuses)
+      if (!order.dueDate || mainStatus === 'CANCELLED') return false
       const dueDate = new Date(order.dueDate)
       return dueDate >= startOfWeek && dueDate <= now
     })
     
     const thisMonth = orders.filter(order => {
-      if (!order.dueDate) return false
+      const mainStatus = getMainStatus(order.statuses)
+      if (!order.dueDate || mainStatus === 'CANCELLED') return false
       const dueDate = new Date(order.dueDate)
       return dueDate >= startOfMonth && dueDate <= endOfMonth
     })
     
     const overdue = orders.filter(order => {
-      if (!order.dueDate) return false
+      const mainStatus = getMainStatus(order.statuses)
+      if (!order.dueDate || mainStatus === 'CANCELLED') return false
       const dueDate = new Date(order.dueDate)
-      return dueDate < now && getMainStatus(order.statuses) !== 'DELIVERED' && getMainStatus(order.statuses) !== 'CANCELLED'
+      return dueDate < now && mainStatus !== 'DELIVERED'
     })
     
     const upcoming = orders.filter(order => {
-      if (!order.dueDate) return false
+      const mainStatus = getMainStatus(order.statuses)
+      if (!order.dueDate || mainStatus === 'CANCELLED') return false
       const dueDate = new Date(order.dueDate)
       const nextWeek = new Date(now)
       nextWeek.setDate(now.getDate() + 7)
@@ -173,11 +177,13 @@ export default function Home() {
   }
 
   const getFinancialStats = () => {
-    const totalValue = orders.reduce((sum, order) => sum + Number(order.totalPrice), 0)
-    const completedOrders = orders.filter(order => getMainStatus(order.statuses) === 'DELIVERED')
+    // Exclude cancelled orders from financial calculations
+    const activeOrders = orders.filter(order => getMainStatus(order.statuses) !== 'CANCELLED')
+    const totalValue = activeOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0)
+    const completedOrders = activeOrders.filter(order => getMainStatus(order.statuses) === 'DELIVERED')
     const completedValue = completedOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0)
     const pendingValue = totalValue - completedValue
-    const averageOrderValue = orders.length > 0 ? totalValue / orders.length : 0
+    const averageOrderValue = activeOrders.length > 0 ? totalValue / activeOrders.length : 0
     
     // Monthly revenue (last 6 months)
     const monthlyRevenue = []
@@ -221,7 +227,10 @@ export default function Home() {
   const getCustomerStats = () => {
     const customerOrders: { [key: string]: { count: number, value: number, orders: Order[] } } = {}
     
-    orders.forEach(order => {
+    // Exclude cancelled orders from customer stats
+    const activeOrders = orders.filter(order => getMainStatus(order.statuses) !== 'CANCELLED')
+    
+    activeOrders.forEach(order => {
       const customerKey = order.customer.company || order.customer.name
       if (!customerOrders[customerKey]) {
         customerOrders[customerKey] = { count: 0, value: 0, orders: [] }
@@ -257,12 +266,14 @@ export default function Home() {
     return { completionRate, averageProcessingTime }
   }
 
-  // Group orders by date
+  // Group orders by date (excluding cancelled orders)
   const groupOrdersByDate = () => {
     const grouped: { [key: string]: Order[] } = {}
     
     orders.forEach(order => {
-      if (order.dueDate) {
+      const mainStatus = getMainStatus(order.statuses)
+      // Only include non-cancelled orders in calendar view
+      if (order.dueDate && mainStatus !== 'CANCELLED') {
         const date = new Date(order.dueDate).toDateString()
         if (!grouped[date]) {
           grouped[date] = []

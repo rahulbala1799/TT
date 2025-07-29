@@ -155,10 +155,11 @@ export default function OrdersPage() {
   }
 
   const filteredOrders = orders.filter(order => {
-    if (filter === 'all') return true
     const mainStatus = getMainStatus(order.statuses)
     
     switch (filter) {
+      case 'all':
+        return !['CANCELLED'].includes(mainStatus) // Exclude cancelled orders from "all" tab
       case 'active':
         return !['DELIVERED', 'CANCELLED'].includes(mainStatus)
       case 'completed':
@@ -166,9 +167,9 @@ export default function OrdersPage() {
       case 'cancelled':
         return mainStatus === 'CANCELLED'
       case 'urgent':
-        return order.priority === 'URGENT'
+        return order.priority === 'URGENT' && mainStatus !== 'CANCELLED' // Exclude cancelled from urgent too
       default:
-        return true
+        return !['CANCELLED'].includes(mainStatus)
     }
   })
 
