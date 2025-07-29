@@ -18,7 +18,7 @@ interface Order {
   title: string
   statuses: OrderStatus[]
   priority: string
-  totalPrice: number
+  totalPrice: string | number
   dueDate: string | null
   createdAt: string
   customer: {
@@ -272,7 +272,7 @@ export default function Home() {
           </div>
           <div className="card p-4 text-center">
             <div className="text-2xl font-bold text-gray-900">
-              {formatEuro(orders.reduce((sum, order) => sum + order.totalPrice, 0))}
+              {formatEuro(orders.reduce((sum, order) => sum + Number(order.totalPrice), 0))}
             </div>
             <div className="text-sm text-muted">Total Value</div>
           </div>
@@ -322,22 +322,22 @@ export default function Home() {
           </div>
 
           {/* Calendar Legend */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mb-6 text-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-6 text-xs sm:text-sm">
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-white border border-gray-300 rounded"></div>
-              <span>No orders</span>
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-white border border-gray-300 rounded flex-shrink-0"></div>
+              <span className="truncate">No orders</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-              <span>1-2 orders</span>
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-100 border border-green-300 rounded flex-shrink-0"></div>
+              <span className="truncate">1-2 orders</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-orange-100 border border-orange-300 rounded"></div>
-              <span>3-4 orders</span>
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-orange-100 border border-orange-300 rounded flex-shrink-0"></div>
+              <span className="truncate">3-4 orders</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
-              <span>5+ orders</span>
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-100 border border-red-300 rounded flex-shrink-0"></div>
+              <span className="truncate">5+ orders</span>
             </div>
           </div>
 
@@ -345,7 +345,7 @@ export default function Home() {
           <div className="grid grid-cols-7 gap-1 mb-4">
             {/* Day headers */}
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="p-2 text-center text-sm font-semibold text-gray-600">
+              <div key={day} className="p-1 sm:p-2 text-center text-xs sm:text-sm font-semibold text-gray-600">
                 {day}
               </div>
             ))}
@@ -361,7 +361,7 @@ export default function Home() {
                   key={index}
                   onClick={() => setSelectedDate(isSelected ? null : dateString)}
                   className={`
-                    relative p-2 h-12 text-sm font-medium border transition-all duration-200 rounded-lg
+                    relative p-1 sm:p-2 h-10 sm:h-12 text-xs sm:text-sm font-medium border transition-all duration-200 rounded-lg
                     ${getDayColor(day)}
                     ${isCurrentMonth(day) ? 'text-gray-900' : 'text-gray-400'}
                     ${isToday(day) ? 'ring-2 ring-blue-500 ring-opacity-50' : ''}
@@ -371,7 +371,7 @@ export default function Home() {
                   <div className="flex flex-col items-center justify-center h-full">
                     <span>{day.getDate()}</span>
                     {ordersForDay.length > 0 && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
+                      <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
                         {ordersForDay.length}
                       </div>
                     )}
@@ -401,44 +401,45 @@ export default function Home() {
                 
                 return (
                   <div key={order.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <div className="flex items-start justify-between space-x-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:space-x-4 space-y-4 sm:space-y-0">
                       <div className="flex items-start space-x-3 flex-1 min-w-0">
-                        <div className="text-2xl">{statusConfig?.icon || '📋'}</div>
+                        <div className="text-xl sm:text-2xl flex-shrink-0">{statusConfig?.icon || '📋'}</div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-gray-900 truncate mb-2">
                             {order.title}
                           </h4>
-                          <div className="flex flex-wrap items-center gap-2 text-sm text-muted mb-3">
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted mb-3">
                             <span className="font-medium">#{order.orderNumber}</span>
-                            <span>•</span>
-                            <span>{order.customer.name}</span>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="truncate">{order.customer.name}</span>
                             {order.customer.company && (
                               <>
-                                <span>•</span>
-                                <span className="text-blue-600">{order.customer.company}</span>
+                                <span className="hidden sm:inline">•</span>
+                                <span className="text-blue-600 truncate">{order.customer.company}</span>
                               </>
                             )}
                           </div>
                           
                           {/* Multiple Status Display */}
-                          <div className="flex flex-wrap gap-2 mb-2">
+                          <div className="flex flex-wrap gap-1 sm:gap-2 mb-2">
                             {order.statuses
                               .filter(s => s.isActive)
-                              .slice(0, 4) // Show max 4 statuses
+                              .slice(0, 3) // Show max 3 statuses on mobile
                               .map(status => {
                                 const config = STATUS_CONFIG[status.status as keyof typeof STATUS_CONFIG]
                                 return (
                                   <span 
                                     key={status.id}
-                                    className={`px-2 py-1 text-xs font-medium rounded-full ${config?.color || 'bg-gray-100 text-gray-800'}`}
+                                    className={`px-1.5 sm:px-2 py-1 text-xs font-medium rounded-full ${config?.color || 'bg-gray-100 text-gray-800'}`}
                                   >
-                                    {config?.icon} {config?.label || status.status}
+                                    <span className="hidden sm:inline">{config?.icon} </span>
+                                    {config?.label || status.status}
                                   </span>
                                 )
                               })}
-                            {order.statuses.filter(s => s.isActive).length > 4 && (
-                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
-                                +{order.statuses.filter(s => s.isActive).length - 4} more
+                            {order.statuses.filter(s => s.isActive).length > 3 && (
+                              <span className="px-1.5 sm:px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                                +{order.statuses.filter(s => s.isActive).length - 3}
                               </span>
                             )}
                           </div>
@@ -450,27 +451,27 @@ export default function Home() {
                         </div>
                       </div>
                       
-                                          <div className="text-right flex-shrink-0">
-                      <div className="text-lg font-bold text-gray-900 mb-3">
-                        {formatEuro(order.totalPrice)}
+                      <div className="text-center sm:text-right flex-shrink-0">
+                        <div className="text-lg font-bold text-gray-900 mb-3">
+                          {formatEuro(Number(order.totalPrice))}
+                        </div>
+                        <div className="flex flex-row sm:flex-col gap-2 justify-center sm:justify-start">
+                          <Link 
+                            href={`/orders/${order.id}/edit`}
+                            className="btn btn-primary btn-sm text-xs px-2 py-1 flex-1 sm:flex-none"
+                          >
+                            ✏️ Edit
+                          </Link>
+                          <button
+                            onClick={() => handleQuickCancel(order.id)}
+                            className="btn btn-danger btn-sm text-xs px-2 py-1 flex-1 sm:flex-none"
+                            disabled={getMainStatus(order.statuses) === 'CANCELLED' || cancelling === order.id}
+                          >
+                            {cancelling === order.id ? 'Cancelling...' : 
+                             getMainStatus(order.statuses) === 'CANCELLED' ? '❌ Cancelled' : '❌ Cancel'}
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <Link 
-                          href={`/orders/${order.id}/edit`}
-                          className="btn btn-primary btn-sm text-xs px-2 py-1"
-                        >
-                          ✏️ Edit
-                        </Link>
-                        <button
-                          onClick={() => handleQuickCancel(order.id)}
-                          className="btn btn-danger btn-sm text-xs px-2 py-1"
-                          disabled={getMainStatus(order.statuses) === 'CANCELLED' || cancelling === order.id}
-                        >
-                          {cancelling === order.id ? 'Cancelling...' : 
-                           getMainStatus(order.statuses) === 'CANCELLED' ? '❌ Cancelled' : '❌ Cancel'}
-                        </button>
-                      </div>
-                    </div>
                     </div>
                   </div>
                 )

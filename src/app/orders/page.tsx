@@ -18,7 +18,7 @@ interface Order {
   title: string
   statuses: OrderStatus[]
   priority: string
-  totalPrice: number
+  totalPrice: string | number
   dueDate: string | null
   createdAt: string
   customer: {
@@ -188,18 +188,18 @@ export default function OrdersPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-8">
           {[
-            { key: 'all', label: 'All Orders', count: orders.length },
+            { key: 'all', label: 'All', count: orders.length },
             { key: 'active', label: 'Active', count: orders.filter(o => !['DELIVERED', 'CANCELLED'].includes(getMainStatus(o.statuses))).length },
-            { key: 'completed', label: 'Completed', count: orders.filter(o => getMainStatus(o.statuses) === 'DELIVERED').length },
+            { key: 'completed', label: 'Done', count: orders.filter(o => getMainStatus(o.statuses) === 'DELIVERED').length },
             { key: 'cancelled', label: 'Cancelled', count: orders.filter(o => getMainStatus(o.statuses) === 'CANCELLED').length },
             { key: 'urgent', label: 'Urgent', count: orders.filter(o => o.priority === 'URGENT').length },
           ].map(filterOption => (
             <button
               key={filterOption.key}
               onClick={() => setFilter(filterOption.key)}
-              className={`btn ${filter === filterOption.key ? 'btn-primary' : 'btn-secondary'} text-sm`}
+              className={`btn ${filter === filterOption.key ? 'btn-primary' : 'btn-secondary'} text-xs sm:text-sm`}
             >
               {filterOption.label} ({filterOption.count})
             </button>
@@ -232,22 +232,22 @@ export default function OrdersPage() {
               const statusConfig = STATUS_CONFIG[mainStatus as keyof typeof STATUS_CONFIG]
               
               return (
-                <div key={order.id} className="card p-6 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between space-x-4">
-                    <div className="flex items-start space-x-4 flex-1 min-w-0">
-                      <div className="text-3xl">{statusConfig?.icon || '📋'}</div>
+                <div key={order.id} className="card p-4 sm:p-6 hover:shadow-md transition-shadow">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:space-x-4 space-y-4 sm:space-y-0">
+                    <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
+                      <div className="text-2xl sm:text-3xl flex-shrink-0">{statusConfig?.icon || '📋'}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between mb-3">
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <h3 className="heading-sm mb-1 truncate">{order.title}</h3>
-                            <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted">
                               <span className="font-medium">#{order.orderNumber}</span>
-                              <span>•</span>
-                              <span>{order.customer.name}</span>
+                              <span className="hidden sm:inline">•</span>
+                              <span className="truncate">{order.customer.name}</span>
                               {order.customer.company && (
                                 <>
-                                  <span>•</span>
-                                  <span className="text-blue-600">{order.customer.company}</span>
+                                  <span className="hidden sm:inline">•</span>
+                                  <span className="text-blue-600 truncate">{order.customer.company}</span>
                                 </>
                               )}
                             </div>
@@ -255,42 +255,43 @@ export default function OrdersPage() {
                         </div>
 
                         {/* Multiple Status Display */}
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-1 sm:gap-2 mb-3">
                           {order.statuses
                             .filter(s => s.isActive)
-                            .slice(0, 5) // Show max 5 statuses
+                            .slice(0, 3) // Show max 3 statuses on mobile
                             .map(status => {
                               const config = STATUS_CONFIG[status.status as keyof typeof STATUS_CONFIG]
                               return (
                                 <span 
                                   key={status.id}
-                                  className={`px-3 py-1 text-sm font-medium rounded-full ${config?.color || 'bg-gray-100 text-gray-800'}`}
+                                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-full ${config?.color || 'bg-gray-100 text-gray-800'}`}
                                 >
-                                  {config?.icon} {config?.label || status.status}
+                                  <span className="hidden sm:inline">{config?.icon} </span>
+                                  {config?.label || status.status}
                                 </span>
                               )
                             })}
-                          {order.statuses.filter(s => s.isActive).length > 5 && (
-                            <span className="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-600">
-                              +{order.statuses.filter(s => s.isActive).length - 5} more
+                          {order.statuses.filter(s => s.isActive).length > 3 && (
+                            <span className="px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-full bg-gray-100 text-gray-600">
+                              +{order.statuses.filter(s => s.isActive).length - 3}
                             </span>
                           )}
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted">
                           <div className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(order.priority)}`}>
                             {order.priority} Priority
                           </div>
                           {order.dueDate && (
                             <div className="flex items-center space-x-1">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
                               <span>Due {new Date(order.dueDate).toLocaleDateString()}</span>
                             </div>
                           )}
                           <div className="flex items-center space-x-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <span>Created {new Date(order.createdAt).toLocaleDateString()}</span>
@@ -299,20 +300,20 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-2xl font-bold text-gray-900 mb-3">
-                        {formatEuro(order.totalPrice)}
+                    <div className="text-center sm:text-right flex-shrink-0">
+                      <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                        {formatEuro(Number(order.totalPrice))}
                       </div>
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-row sm:flex-col gap-2 justify-center sm:justify-start">
                         <Link 
                           href={`/orders/${order.id}/edit`}
-                          className="btn btn-primary btn-sm"
+                          className="btn btn-primary btn-sm flex-1 sm:flex-none"
                         >
                           ✏️ Edit
                         </Link>
                         <button
                           onClick={() => handleQuickCancel(order.id)}
-                          className="btn btn-danger btn-sm"
+                          className="btn btn-danger btn-sm flex-1 sm:flex-none"
                           disabled={getMainStatus(order.statuses) === 'CANCELLED' || cancelling === order.id}
                         >
                           {cancelling === order.id ? 'Cancelling...' : 
@@ -348,7 +349,7 @@ export default function OrdersPage() {
             </div>
             <div className="card p-4 text-center">
                           <div className="text-xl font-bold text-gray-900">
-              {formatEuro(orders.reduce((sum, order) => sum + order.totalPrice, 0))}
+              {formatEuro(orders.reduce((sum, order) => sum + Number(order.totalPrice), 0))}
             </div>
               <div className="text-sm text-muted">Total Value</div>
             </div>
