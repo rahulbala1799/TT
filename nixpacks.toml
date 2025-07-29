@@ -1,0 +1,15 @@
+[phases.setup]
+nixPkgs = ['nodejs-18_x', 'npm-9_x']
+
+[phases.install]
+cmds = ['npm ci --only=production --ignore-scripts', 'npm install prisma --save-dev']
+
+[phases.build]
+cmds = ['npm run railway:build']
+
+[start]
+cmd = 'npm start'
+
+[variables]
+NODE_ENV = 'production'
+NIXPACKS_BUILD_TIME_ENV_VARS = 'NODE_ENV,DATABASE_URL' 

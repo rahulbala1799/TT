@@ -1,0 +1,135 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("USER") // USER, MANAGER, ADMIN
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  orders   Order[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  address     String?
+  company     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders Order[]
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  customerId      String
+  userId          String
+  title           String
+  description     String?
+  quantity        Int
+  unitPrice       Decimal @db.Decimal(10, 2)
+  totalPrice      Decimal @db.Decimal(10, 2)
+  priority        String @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  dueDate         DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  customer     Customer       @relation(fields: [customerId], references: [id])
+  user         User           @relation(fields: [userId], references: [id])
+  orderItems   OrderItem[]
+  statuses     OrderStatus[]
+  statusLogs   OrderStatusLog[]
+}
+
+model OrderStatus {
+  id        String   @id @default(cuid())
+  orderId   String
+  status    String   // ENQUIRY, QUOTE_SENT, QUOTE_APPROVED, DESIGN_BRIEF, IN_DESIGN, DESIGN_PROOFING, DESIGN_APPROVED, MATERIALS_ORDERED, MATERIALS_IN_STOCK, PAYMENT_PENDING, PAYMENT_RECEIVED, IN_PRODUCTION, QUALITY_CHECK, READY_FOR_DELIVERY, OUT_FOR_DELIVERY, DELIVERED, ON_HOLD, CANCELLED
+  isActive  Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, status])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  name        String
+  description String?
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(10, 2)
+  totalPrice  Decimal @db.Decimal(10, 2)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model OrderStatusLog {
+  id        String      @id @default(cuid())
+  orderId   String
+  status    String      
+  action    String      // ADDED, REMOVED, UPDATED
+  notes     String?
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+} 
