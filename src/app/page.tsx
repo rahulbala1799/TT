@@ -444,7 +444,7 @@ export default function Home() {
         {/* Enhanced Quick Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="card p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{orders.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{orders.filter(order => getMainStatus(order.statuses) !== 'CANCELLED').length}</div>
             <div className="text-sm text-muted">Total Orders</div>
           </div>
           <div className="card p-4 text-center">
