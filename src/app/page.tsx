@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatEuro } from '@/lib/utils'
 import PasswordModal from '@/components/PasswordModal'
+import StatusManager from '@/components/StatusManager'
 
 interface OrderStatus {
   id: string
@@ -350,6 +351,14 @@ export default function Home() {
     }
   }
 
+  const handleStatusUpdate = (orderId: string, newStatuses: OrderStatus[]) => {
+    setOrders(prev => prev.map(order => 
+      order.id === orderId 
+        ? { ...order, statuses: newStatuses }
+        : order
+    ))
+  }
+
   // Calculate enhanced stats
   const { thisWeek, thisMonth, overdue, upcoming } = getTimeBasedStats()
   const { totalValue, completedValue, pendingValue, averageOrderValue, monthlyRevenue } = getFinancialStats()
@@ -613,6 +622,13 @@ export default function Home() {
                           {formatEuro(Number(order.totalPrice))}
                         </div>
                         <div className="flex flex-row sm:flex-col gap-2 justify-center sm:justify-start">
+                          <StatusManager
+                            orderId={order.id}
+                            currentStatuses={order.statuses}
+                            onStatusUpdate={handleStatusUpdate}
+                            size="sm"
+                            variant="dropdown"
+                          />
                           <Link 
                             href={`/orders/${order.id}/edit`}
                             className="btn btn-primary btn-sm text-xs px-2 py-1 flex-1 sm:flex-none"

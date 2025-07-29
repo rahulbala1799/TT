@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatEuro } from '@/lib/utils'
+import StatusManager from '@/components/StatusManager'
 
 interface OrderStatus {
   id: string
@@ -135,6 +136,14 @@ export default function OrdersPage() {
     } finally {
       setCancelling(null)
     }
+  }
+
+  const handleStatusUpdate = (orderId: string, newStatuses: OrderStatus[]) => {
+    setOrders(prev => prev.map(order => 
+      order.id === orderId 
+        ? { ...order, statuses: newStatuses }
+        : order
+    ))
   }
 
   const filteredOrders = orders.filter(order => {
@@ -304,22 +313,35 @@ export default function OrdersPage() {
                       <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
                         {formatEuro(Number(order.totalPrice))}
                       </div>
-                      <div className="flex flex-row sm:flex-col gap-2 justify-center sm:justify-start">
-                        <Link 
-                          href={`/orders/${order.id}/edit`}
-                          className="btn btn-primary btn-sm flex-1 sm:flex-none"
-                        >
-                          ✏️ Edit
-                        </Link>
-                        <button
-                          onClick={() => handleQuickCancel(order.id)}
-                          className="btn btn-danger btn-sm flex-1 sm:flex-none"
-                          disabled={getMainStatus(order.statuses) === 'CANCELLED' || cancelling === order.id}
-                        >
-                          {cancelling === order.id ? 'Cancelling...' : 
-                           getMainStatus(order.statuses) === 'CANCELLED' ? '❌ Cancelled' : '❌ Cancel'}
-                        </button>
-                      </div>
+                                              <div className="flex flex-row sm:flex-col gap-2 justify-center sm:justify-start">
+                          <StatusManager
+                            orderId={order.id}
+                            currentStatuses={order.statuses}
+                            onStatusUpdate={handleStatusUpdate}
+                            size="sm"
+                            variant="dropdown"
+                          />
+                          <Link 
+                            href={`/orders/${order.id}`}
+                            className="btn btn-secondary btn-sm flex-1 sm:flex-none"
+                          >
+                            👁️ View
+                          </Link>
+                          <Link 
+                            href={`/orders/${order.id}/edit`}
+                            className="btn btn-primary btn-sm flex-1 sm:flex-none"
+                          >
+                            ✏️ Edit
+                          </Link>
+                          <button
+                            onClick={() => handleQuickCancel(order.id)}
+                            className="btn btn-danger btn-sm flex-1 sm:flex-none"
+                            disabled={getMainStatus(order.statuses) === 'CANCELLED' || cancelling === order.id}
+                          >
+                            {cancelling === order.id ? 'Cancelling...' : 
+                             getMainStatus(order.statuses) === 'CANCELLED' ? '❌ Cancelled' : '❌ Cancel'}
+                          </button>
+                        </div>
                     </div>
                   </div>
                 </div>
