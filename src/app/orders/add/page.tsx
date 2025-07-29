@@ -61,8 +61,8 @@ export default function AddJobPage() {
       id: Date.now().toString(),
       name: product.name,
       description: product.description,
-      quantity: 1,
-      unitPrice: product.unitPrice,
+      quantity: 0,
+      unitPrice: 0,
     }
     setProducts(prev => [...prev, newItem])
   }
@@ -78,7 +78,7 @@ export default function AddJobPage() {
       unitPrice: customProduct.unitPrice,
     }
     setProducts(prev => [...prev, newItem])
-    setCustomProduct({ name: '', unitPrice: 0, quantity: 1 })
+    setCustomProduct({ name: '', unitPrice: 0, quantity: 0 })
     setShowCustomProduct(false)
   }
 
@@ -88,7 +88,7 @@ export default function AddJobPage() {
 
   const updateProductQuantity = (id: string, quantity: number) => {
     setProducts(prev => prev.map(p => 
-      p.id === id ? { ...p, quantity: Math.max(1, quantity) } : p
+      p.id === id ? { ...p, quantity: Math.max(0, quantity) } : p
     ))
   }
 
@@ -334,7 +334,7 @@ export default function AddJobPage() {
                       <h3 className="font-semibold text-gray-900 mb-1">{product.name}</h3>
                       <p className="text-sm text-gray-600 mb-2 flex-1">{product.description}</p>
                       <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-blue-600">{formatEuro(product.unitPrice)}</span>
+                        <span className="text-lg font-bold text-blue-600">€0.00</span>
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                           {product.category}
                         </span>
@@ -376,11 +376,11 @@ export default function AddJobPage() {
                         <label className="form-label">Quantity</label>
                         <input
                           type="number"
-                          placeholder="1"
-                          value={customProduct.quantity}
-                          onChange={(e) => setCustomProduct(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                          placeholder="0"
+                          value={customProduct.quantity || ''}
+                          onChange={(e) => setCustomProduct(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
                           className="input"
-                          min="1"
+                          min="0"
                         />
                       </div>
                       <div className="form-group">
@@ -388,7 +388,7 @@ export default function AddJobPage() {
                         <input
                           type="number"
                           placeholder="0.00"
-                          value={customProduct.unitPrice}
+                          value={customProduct.unitPrice || ''}
                           onChange={(e) => setCustomProduct(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
                           className="input"
                           min="0"
@@ -433,23 +433,14 @@ export default function AddJobPage() {
                           {/* Quantity Control */}
                           <div className="flex items-center">
                             <label className="text-sm text-gray-600 mr-2">Qty:</label>
-                            <div className="quantity-control">
-                              <button
-                                onClick={() => updateProductQuantity(product.id, product.quantity - 1)}
-                                className="quantity-btn"
-                              >
-                                −
-                              </button>
-                              <span className="px-4 py-2 text-center font-medium min-w-[60px]">
-                                {product.quantity}
-                              </span>
-                              <button
-                                onClick={() => updateProductQuantity(product.id, product.quantity + 1)}
-                                className="quantity-btn"
-                              >
-                                +
-                              </button>
-                            </div>
+                            <input
+                              type="number"
+                              value={product.quantity || ''}
+                              onChange={(e) => updateProductQuantity(product.id, parseInt(e.target.value) || 0)}
+                              className="input w-20 text-center"
+                              placeholder="0"
+                              min="0"
+                            />
                           </div>
                           
                           {/* Price Control */}
@@ -457,9 +448,10 @@ export default function AddJobPage() {
                             <label className="text-sm text-gray-600 mr-2">€</label>
                             <input
                               type="number"
-                              value={product.unitPrice}
+                              value={product.unitPrice || ''}
                               onChange={(e) => updateProductPrice(product.id, parseFloat(e.target.value) || 0)}
                               className="input w-20 text-center"
+                              placeholder="0.00"
                               min="0"
                               step="0.01"
                             />
