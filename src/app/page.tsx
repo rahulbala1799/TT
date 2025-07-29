@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatEuro } from '@/lib/utils'
+import PasswordModal from '@/components/PasswordModal'
 
 interface OrderStatus {
   id: string
@@ -66,10 +67,26 @@ export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
 
   useEffect(() => {
-    fetchOrders()
+    // Check if user is already authenticated
+    const authenticated = sessionStorage.getItem('printtrack_authenticated') === 'true'
+    setIsAuthenticated(authenticated)
+    
+    if (!authenticated) {
+      setShowPasswordModal(true)
+    } else {
+      fetchOrders()
+    }
   }, [])
+
+  const handlePasswordSuccess = () => {
+    setIsAuthenticated(true)
+    setShowPasswordModal(false)
+    fetchOrders()
+  }
 
   const fetchOrders = async () => {
     try {
@@ -232,6 +249,16 @@ export default function Home() {
     'July', 'August', 'September', 'October', 'November', 'December'
   ]
 
+  // Show password modal if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <PasswordModal 
+        isOpen={showPasswordModal} 
+        onSuccess={handlePasswordSuccess} 
+      />
+    )
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -249,11 +276,26 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container-responsive section-padding">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 relative">
           <h1 className="heading-xl mb-4">PrintTrack Dashboard</h1>
           <p className="text-muted text-lg max-w-2xl mx-auto">
             Your complete printing order management system. Track jobs from enquiry to delivery.
           </p>
+          
+          {/* Logout Button */}
+          <button
+            onClick={() => {
+              sessionStorage.removeItem('printtrack_authenticated')
+              setIsAuthenticated(false)
+              setShowPasswordModal(true)
+            }}
+            className="absolute top-0 right-0 btn btn-ghost btn-sm text-gray-500 hover:text-gray-700"
+            title="Logout"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
         </div>
 
         {/* Quick Stats */}
