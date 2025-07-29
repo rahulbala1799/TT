@@ -232,11 +232,13 @@ export async function DELETE(
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action') || 'cancel' // 'cancel' or 'delete'
 
+    console.log('DELETE request received:', { orderId: params.id, action })
+
     if (action === 'cancel') {
       // Cancel the order by adding CANCELLED status and deactivating others
-      await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         // Deactivate all current statuses
-        await tx.orderStatus.updateMany({
+        const deactivatedStatuses = await tx.orderStatus.updateMany({
           where: {
             orderId: params.id,
             isActive: true
@@ -244,9 +246,21 @@ export async function DELETE(
           data: { isActive: false }
         })
 
+        console.log('Deactivated statuses:', deactivatedStatuses)
+
         // Add CANCELLED status
-        await tx.orderStatus.create({
-          data: {
+        const cancelledStatus = await tx.orderStatus.upsert({
+          where: {
+            orderId_status: {
+              orderId: params.id,
+              status: 'CANCELLED'
+            }
+          },
+          update: {
+            isActive: true,
+            notes: 'Order cancelled by user'
+          },
+          create: {
             orderId: params.id,
             status: 'CANCELLED',
             isActive: true,
@@ -254,8 +268,10 @@ export async function DELETE(
           }
         })
 
+        console.log('Created cancelled status:', cancelledStatus)
+
         // Log the cancellation
-        await tx.orderStatusLog.create({
+        const statusLog = await tx.orderStatusLog.create({
           data: {
             orderId: params.id,
             status: 'CANCELLED',
@@ -263,7 +279,13 @@ export async function DELETE(
             notes: 'Order cancelled by user'
           }
         })
+
+        console.log('Created status log:', statusLog)
+
+        return { deactivatedStatuses, cancelledStatus, statusLog }
       })
+
+      console.log('Transaction completed:', result)
 
       // Return the updated order
       const cancelledOrder = await prisma.order.findUnique({
@@ -276,6 +298,8 @@ export async function DELETE(
           }
         }
       })
+
+      console.log('Cancelled order:', cancelledOrder)
 
       return NextResponse.json(cancelledOrder)
     } else {

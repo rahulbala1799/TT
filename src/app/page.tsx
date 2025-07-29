@@ -333,15 +333,23 @@ export default function Home() {
     
     setCancelling(orderId)
     try {
+      console.log('Attempting to cancel order:', orderId)
+      
       const response = await fetch(`/api/orders/${orderId}?action=cancel`, {
         method: 'DELETE'
       })
       
+      console.log('Cancel response status:', response.status)
+      
       if (response.ok) {
+        const result = await response.json()
+        console.log('Cancel response:', result)
         // Refresh orders list
         fetchOrders()
       } else {
-        alert('Failed to cancel order')
+        const errorData = await response.json()
+        console.error('Cancel error response:', errorData)
+        alert(`Failed to cancel order: ${errorData.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error cancelling order:', error)
